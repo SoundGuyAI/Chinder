@@ -13,12 +13,15 @@ list current after each PR.
    controls), then escalating ghosting with typing dots, read receipts and
    "last seen"; free-text input unlocks as ghosting starts.
 4. GitHub Pages deploy workflow (static, no build step).
+5. Matches inbox: chat icon on the deck lists all matches, each match keeps
+   her own conversation state, and you can move between chats and the deck.
+6. Varied conversations: 8 question scripts and 4 ghosting styles across the
+   40 profiles. Every match still opens by asking whether your company makes
+   GPUs, worded her own way. Non-yes/no questions offer multiple-choice
+   answers with their own replies.
 
 ## Up next
 
-5. Enable GitHub Pages (repo Settings > Pages > GitHub Actions) once the
-   preview is approved.
-6. Multiple concurrent matches: keep a match list and per-match chat state.
 7. Sound effects / haptics on match.
 8. "Report" button that replies with a fake HR auto-response.
 
