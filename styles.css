@@ -122,8 +122,9 @@ body {
 .deck-header { justify-content: space-between; }
 .inbox-btn {
   position: relative; background: var(--panel); border: none; border-radius: 50%;
-  width: 44px; height: 44px; font-size: 20px; cursor: pointer; color: var(--text);
+  width: 44px; height: 44px; cursor: pointer; color: var(--text);
   box-shadow: 0 4px 14px rgba(0,0,0,.4); margin-left: auto;
+  display: flex; align-items: center; justify-content: center;
 }
 .badge {
   position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px;
