@@ -14,10 +14,16 @@ real executives, or real companies are depicted or referenced.
    still try it."
 2. **Swipe deck** - 40 profiles. Swipe right (or tap the heart) and it's an
    instant match, every time. They always like you back. They're motivated.
-3. **Chat** - your match asks about your company: GPUs, AI policy, RAM,
-   export controls. Answer with Yes/No buttons. After a while she starts
-   ghosting you - typing dots that die, read receipts, "last seen". A free-text
-   box unlocks as the ghosting begins, for maximum humiliation.
+3. **Chat** - your match opens by asking whether your company makes GPUs
+   (everyone asks; everyone phrases it differently), then keeps digging with
+   her own questions. Some are Yes/No, others give you a few answers to pick
+   from. After a while she starts ghosting you - typing dots that die, read
+   receipts, "last seen". A free-text box unlocks as the ghosting begins, for
+   maximum humiliation. Every match has her own questions, tone and ghosting
+   style.
+4. **Matches inbox** - the chat icon on the deck opens your match list. Each
+   match keeps her own conversation where you left it, so you can hop between
+   chats and the deck and experience them all.
 
 ## Privacy
 
