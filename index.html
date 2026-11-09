@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chinder</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Gate: screening -->
+  <section id="screen-gate" class="screen active">
+    <div class="gate-card">
+      <div class="logo">Chinder<span class="logo-tm">&#8482;</span></div>
+      <div class="tagline">Where executives meet admirers.</div>
+      <div id="gate-question" class="gate-question"></div>
+      <div id="gate-answers" class="gate-answers"></div>
+      <div id="gate-note" class="gate-note"></div>
+    </div>
+  </section>
+
+  <!-- Swipe deck -->
+  <section id="screen-deck" class="screen">
+    <header class="deck-header">
+      <div class="logo small">Chinder</div>
+      <div class="deck-sub" id="deck-sub"></div>
+    </header>
+    <div id="deck" class="deck"></div>
+    <div class="deck-actions">
+      <button id="btn-nope" class="round-btn nope" aria-label="Nope">&#10005;</button>
+      <button id="btn-like" class="round-btn like" aria-label="Like">&#10084;</button>
+    </div>
+    <div id="deck-empty" class="deck-empty hidden">
+      <p>You've swiped through everyone.</p>
+      <p class="dim">Impressive. The admirers will regroup and try again later.</p>
+      <button id="btn-reshuffle" class="text-btn">Reshuffle deck</button>
+    </div>
+  </section>
+
+  <!-- Match overlay -->
+  <section id="screen-match" class="screen overlay">
+    <div class="match-card">
+      <div class="match-title">It's a Match!</div>
+      <div class="match-sub" id="match-sub"></div>
+      <img id="match-photo" class="match-photo" alt="Match photo">
+      <button id="btn-chat" class="text-btn big">Send a message</button>
+      <button id="btn-keep-swiping" class="text-btn ghostbtn">Keep swiping</button>
+    </div>
+  </section>
+
+  <!-- Chat -->
+  <section id="screen-chat" class="screen">
+    <header class="chat-header">
+      <button id="btn-back" class="back-btn" aria-label="Back">&#8592;</button>
+      <img id="chat-avatar" class="chat-avatar" alt="">
+      <div class="chat-peer">
+        <div id="chat-name" class="chat-name"></div>
+        <div id="chat-status" class="chat-status">online</div>
+      </div>
+    </header>
+    <div id="chat-log" class="chat-log"></div>
+    <div id="chat-buttons" class="chat-buttons hidden">
+      <button id="btn-yes" class="text-btn">Yes</button>
+      <button id="btn-no" class="text-btn">No</button>
+    </div>
+    <div id="chat-input-row" class="chat-input-row hidden">
+      <input id="chat-input" type="text" placeholder="Say something..." autocomplete="off">
+      <button id="btn-send" class="send-btn" aria-label="Send">&#10148;</button>
+    </div>
+  </section>
+
+</div>
+<script src="./profiles.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
