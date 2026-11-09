@@ -6,6 +6,11 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
+  function imgFor(p) {
+    if (window.CHINDER_IMGS && window.CHINDER_IMGS[p.id]) return window.CHINDER_IMGS[p.id];
+    return "./assets/profiles/" + p.id + ".jpg";
+  }
+
   var screens = {
     gate: $("screen-gate"),
     deck: $("screen-deck"),
@@ -111,7 +116,7 @@
   function makeCard(p, isTop) {
     var card = document.createElement("div");
     card.className = "swipe-card";
-    card.style.backgroundImage = "url('./assets/profiles/" + p.id + ".jpg')";
+    card.style.backgroundImage = "url('" + imgFor(p) + "')";
     if (!isTop) { card.style.transform = "scale(0.96) translateY(10px)"; card.style.pointerEvents = "none"; }
     card.innerHTML =
       '<div class="gradient"></div>' +
@@ -182,7 +187,7 @@
 
   function openMatch(p) {
     matchProfile = p;
-    $("match-photo").src = "./assets/profiles/" + p.id + ".jpg";
+    $("match-photo").src = imgFor(p);
     $("match-sub").textContent = "You and " + p.name + " have liked each other's... profiles.";
     show("match");
   }
@@ -212,7 +217,7 @@
       ghostReplyIndex: 0,
     };
     $("chat-name").textContent = p.name;
-    $("chat-avatar").src = "./assets/profiles/" + p.id + ".jpg";
+    $("chat-avatar").src = imgFor(p);
     setStatus("online", true);
     $("chat-log").innerHTML = "";
     $("chat-buttons").classList.add("hidden");
