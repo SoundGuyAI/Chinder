@@ -1,4 +1,4 @@
-/* Chinder app logic. All state is client-side (localStorage + memory).
+/* Chinder app logic. All state is client-side (memory only, per page session).
    Nothing the user answers or types is sent anywhere. */
 
 (function () {
@@ -11,9 +11,12 @@
     return "./assets/profiles/" + p.id + ".jpg";
   }
 
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
   var screens = {
     gate: $("screen-gate"),
     deck: $("screen-deck"),
+    inbox: $("screen-inbox"),
     match: $("screen-match"),
     chat: $("screen-chat")
   };
@@ -80,6 +83,20 @@
     renderGate();
   }
 
+  /* ---------------- Matches ---------------- */
+
+  var matches = {}; // profile id -> chat state, in match order via matchOrder
+  var matchOrder = [];
+
+  function isMatched(p) { return !!matches[p.id]; }
+
+  function updateInboxBadge() {
+    var badge = $("inbox-badge");
+    var n = matchOrder.length;
+    badge.textContent = n;
+    badge.classList.toggle("hidden", n === 0);
+  }
+
   /* ---------------- Swipe deck ---------------- */
 
   var deck = [];
@@ -94,10 +111,9 @@
   }
 
   function startDeck() {
-    deck = shuffle(PROFILES.slice());
-    $("deck-sub").textContent = deck.length + " admirers nearby";
-    $("deck-empty").classList.add("hidden");
+    deck = shuffle(PROFILES.filter(function (p) { return !isMatched(p); }));
     renderDeck();
+    updateInboxBadge();
     show("deck");
   }
 
@@ -180,25 +196,78 @@
   $("btn-like").addEventListener("click", function () { if (current) swipe(current, true); });
   $("btn-nope").addEventListener("click", function () { if (current) swipe(current, false); });
   $("btn-reshuffle").addEventListener("click", startDeck);
+  $("btn-inbox").addEventListener("click", openInbox);
 
-  /* ---------------- Match ---------------- */
+  /* ---------------- Inbox ---------------- */
+
+  function openInbox() {
+    renderInbox();
+    show("inbox");
+  }
+
+  function renderInbox() {
+    var list = $("inbox-list");
+    list.innerHTML = "";
+    var n = matchOrder.length;
+    $("inbox-sub").textContent = n === 0
+      ? "No matches yet. They all like you back, it's basically guaranteed."
+      : n + (n === 1 ? " admirer waiting" : " admirers waiting");
+    matchOrder.slice().reverse().forEach(function (id) {
+      var st = matches[id];
+      var p = st.profile;
+      var row = document.createElement("button");
+      row.className = "inbox-row";
+      var img = document.createElement("img");
+      img.className = "inbox-avatar";
+      img.src = imgFor(p);
+      img.alt = "";
+      var mid = document.createElement("div");
+      mid.className = "inbox-mid";
+      var nm = document.createElement("div");
+      nm.className = "inbox-name";
+      nm.textContent = p.name;
+      var sn = document.createElement("div");
+      sn.className = "inbox-snippet";
+      var last = st.messages.length ? st.messages[st.messages.length - 1] : null;
+      sn.textContent = last ? (last.dir === "out" ? "You: " : "") + last.text : "Say hi before she loses interest.";
+      mid.appendChild(nm);
+      mid.appendChild(sn);
+      var st2 = document.createElement("div");
+      st2.className = "inbox-status" + (st.phase === "silent" || st.phase === "ghost" ? "" : " online");
+      st2.textContent = st.statusText || "online";
+      row.appendChild(img);
+      row.appendChild(mid);
+      row.appendChild(st2);
+      row.addEventListener("click", function () { openChat(p); });
+      list.appendChild(row);
+    });
+  }
+
+  $("btn-inbox-back").addEventListener("click", function () { show("deck"); });
+
+  /* ---------------- Match overlay ---------------- */
 
   var matchProfile = null;
 
   function openMatch(p) {
     matchProfile = p;
+    ensureMatch(p);
     $("match-photo").src = imgFor(p);
     $("match-sub").textContent = "You and " + p.name + " have liked each other's... profiles.";
     show("match");
   }
 
   $("btn-chat").addEventListener("click", function () { openChat(matchProfile); });
-  $("btn-keep-swiping").addEventListener("click", function () { show("deck"); });
-  $("btn-back").addEventListener("click", function () { show("deck"); });
+  $("btn-keep-swiping").addEventListener("click", function () { startDeck(); });
+  $("btn-back").addEventListener("click", function () {
+    clearChatTimers();
+    chat = null;
+    openInbox();
+  });
 
   /* ---------------- Chat ---------------- */
 
-  var chat = null;
+  var chat = null;      // active chat state
   var allTimers = [];
 
   function clearChatTimers() {
@@ -207,36 +276,35 @@
     hideTyping();
   }
 
-  function openChat(p) {
-    clearChatTimers();
-    chat = {
-      profile: p,
-      qIndex: 0,
-      phase: "questions",      // questions -> ghost -> silent
-      ghostStep: 0,
-      ghostReplyIndex: 0,
-    };
-    $("chat-name").textContent = p.name;
-    $("chat-avatar").src = imgFor(p);
-    setStatus("online", true);
-    $("chat-log").innerHTML = "";
-    $("chat-buttons").classList.add("hidden");
-    $("chat-input-row").classList.add("hidden");
-    show("chat");
-    schedule(chatTimers(), 1200, function () {
-      typeThenSay(p.opener, function () {
-        askNextQuestion();
-      });
-    });
-  }
-
-  function chatTimers() { return allTimers; }
   function schedule(arr, ms, fn) { var t = setTimeout(fn, ms); arr.push(t); return t; }
+
+  function ensureMatch(p) {
+    if (!matches[p.id]) {
+      var map = PROFILE_SCRIPTS[p.id] || { script: "s1", ghost: "g1" };
+      matches[p.id] = {
+        profile: p,
+        script: CHAT_SCRIPTS[map.script],
+        ghost: GHOST_VARIANTS[map.ghost],
+        messages: [],        // {text, dir, meta}
+        qIndex: 0,
+        awaiting: false,     // a question is on screen waiting for a tap
+        phase: "questions",  // questions -> ghost -> silent
+        ghostStepIdx: 0,
+        ghostReplyIndex: 0,
+        statusText: "online",
+        statusOnline: true
+      };
+      matchOrder.push(p.id);
+      updateInboxBadge();
+    }
+    return matches[p.id];
+  }
 
   function setStatus(text, online) {
     var el = $("chat-status");
     el.textContent = text;
     el.classList.toggle("online", !!online);
+    if (chat) { chat.statusText = text; chat.statusOnline = !!online; }
   }
 
   function scrollLog() {
@@ -245,19 +313,24 @@
   }
 
   function addMsg(text, dir, meta) {
+    if (chat) chat.messages.push({ text: text, dir: dir, meta: meta || null });
+    return appendMsgNode({ text: text, dir: dir, meta: meta || null });
+  }
+
+  function appendMsgNode(m) {
     var log = $("chat-log");
-    var m = document.createElement("div");
-    m.className = "msg " + dir;
-    m.textContent = text;
-    if (meta) {
+    var el = document.createElement("div");
+    el.className = "msg " + m.dir;
+    el.textContent = m.text;
+    if (m.meta) {
       var s = document.createElement("span");
       s.className = "meta";
-      s.textContent = meta;
-      m.appendChild(s);
+      s.textContent = m.meta;
+      el.appendChild(s);
     }
-    log.appendChild(m);
+    log.appendChild(el);
     scrollLog();
-    return m;
+    return el;
   }
 
   function showTyping() {
@@ -278,95 +351,151 @@
   function typeThenSay(msg, typingMs, cb) {
     if (typeof typingMs === "function") { cb = typingMs; typingMs = 1600 + Math.random() * 1400; }
     showTyping();
-    schedule(chatTimers(), typingMs, function () {
+    schedule(allTimers, typingMs, function () {
       hideTyping();
       if (msg) addMsg(msg, "in");
-      if (cb) schedule(chatTimers(), 600, cb);
+      if (cb) schedule(allTimers, 600, cb);
     });
+  }
+
+  function openChat(p) {
+    clearChatTimers();
+    chat = ensureMatch(p);
+    $("chat-name").textContent = p.name;
+    $("chat-avatar").src = imgFor(p);
+    var st = $("chat-status");
+    st.textContent = chat.statusText;
+    st.classList.toggle("online", chat.statusOnline);
+    var log = $("chat-log");
+    log.innerHTML = "";
+    chat.messages.forEach(appendMsgNode);
+    $("chat-buttons").classList.add("hidden");
+    $("chat-input-row").classList.toggle("hidden", chat.phase === "questions");
+    show("chat");
+    resumeChat();
+  }
+
+  // Pick up where this match's conversation left off.
+  function resumeChat() {
+    if (chat.messages.length === 0) {
+      schedule(allTimers, 1200, function () {
+        if (!chat) return;
+        typeThenSay(chat.profile.opener, function () { if (chat) askNextQuestion(); });
+      });
+      return;
+    }
+    if (chat.phase === "questions") {
+      if (chat.awaiting) {
+        showAnswerButtons(chat.script.questions[chat.qIndex]);
+      } else {
+        schedule(allTimers, 900, function () { if (chat) askNextQuestion(); });
+      }
+    } else if (chat.phase === "ghost") {
+      schedule(allTimers, 1500, runGhostSteps);
+    }
+    // silent: nothing to resume; input is already unlocked.
+  }
+
+  function showAnswerButtons(q) {
+    var box = $("chat-buttons");
+    box.innerHTML = "";
+    q.answers.forEach(function (a, idx) {
+      var b = document.createElement("button");
+      b.className = "text-btn";
+      b.textContent = a.t;
+      b.addEventListener("click", function () { answerQuestion(idx); });
+      box.appendChild(b);
+    });
+    box.classList.remove("hidden");
   }
 
   function askNextQuestion() {
     if (!chat || chat.phase !== "questions") return;
-    if (chat.qIndex >= CHAT_QUESTIONS.length) { startGhosting(); return; }
-    var q = CHAT_QUESTIONS[chat.qIndex];
+    if (chat.qIndex >= chat.script.questions.length) { startGhosting(); return; }
+    var q = chat.script.questions[chat.qIndex];
     typeThenSay(q.q, function () {
-      $("chat-buttons").classList.remove("hidden");
+      if (!chat) return;
+      chat.awaiting = true;
+      showAnswerButtons(q);
     });
   }
 
-  function answerQuestion(isYes) {
-    if (!chat || chat.phase !== "questions") return;
+  function answerQuestion(idx) {
+    if (!chat || chat.phase !== "questions" || !chat.awaiting) return;
+    chat.awaiting = false;
     $("chat-buttons").classList.add("hidden");
-    addMsg(isYes ? "Yes" : "No", "out", "seen");
-    var q = CHAT_QUESTIONS[chat.qIndex];
+    var q = chat.script.questions[chat.qIndex];
+    var a = q.answers[idx];
+    addMsg(a.t, "out", "seen");
     chat.qIndex++;
-    var pool = isYes ? q.yes : q.no;
-    var reply = pool[Math.floor(Math.random() * pool.length)];
-    schedule(chatTimers(), 700, function () {
-      typeThenSay(reply, function () { askNextQuestion(); });
+    schedule(allTimers, 700, function () {
+      if (!chat) return;
+      typeThenSay(pick(a.r), function () { if (chat) askNextQuestion(); });
     });
   }
-
-  $("btn-yes").addEventListener("click", function () { answerQuestion(true); });
-  $("btn-no").addEventListener("click", function () { answerQuestion(false); });
 
   /* ---- Ghosting ---- */
 
   function startGhosting() {
+    if (!chat) return;
     chat.phase = "ghost";
-    var stepIdx = 0;
-    function runStep() {
-      if (!chat || chat.phase !== "ghost") return;
-      if (stepIdx >= GHOST_STEPS.length) return;
-      var s = GHOST_STEPS[stepIdx++];
-      schedule(chatTimers(), s.delay, function () {
-        if (s.status) setStatus(s.status, false);
-        if (s.unlockInput) $("chat-input-row").classList.remove("hidden");
-        if (s.msg) {
-          typeThenSay(s.msg, s.typing || 1500, runStep);
-        } else if (s.typing) {
-          showTyping();
-          schedule(chatTimers(), s.typing, function () { hideTyping(); runStep(); });
-        } else {
-          runStep();
-        }
-      });
-    }
-    runStep();
-    schedule(chatTimers(), 60000, function () { setStatus("last seen 1 hour ago", false); });
+    chat.ghostStepIdx = 0;
+    runGhostSteps();
+    schedule(allTimers, 60000, function () {
+      if (chat && chat.phase !== "questions") setStatus(chat.ghost.lateStatus, false);
+    });
   }
 
-  function handleFreeText(text) {
-    addMsg(text, "out", "delivered");
-    if (!chat || chat.phase === "silent") return;
-    if (chat.phase === "questions") {
-      // Free text during question phase isn't expected; buttons are the path.
-      return;
-    }
-    // Ghost phase replies: increasingly sparse, then silence.
-    var r = GHOST_REPLIES[chat.ghostReplyIndex];
-    if (!r) {
-      chat.phase = "silent";
-      // Mark older outgoing messages as read after a long beat, say nothing.
-      schedule(chatTimers(), 30000, markAllRead);
-      setStatus("last seen recently", false);
-      return;
-    }
-    chat.ghostReplyIndex++;
-    schedule(chatTimers(), 1500, function () {
-      markAllRead();
-      if (r.msg) { typeThenSay(r.msg, r.typing); }
-      else if (r.typing) { showTyping(); schedule(chatTimers(), r.typing, hideTyping); }
-      if (chat.ghostReplyIndex >= GHOST_REPLIES.length) {
-        chat.phase = "silent";
-        setStatus("last seen 3 hours ago", false);
+  function runGhostSteps() {
+    if (!chat || chat.phase !== "ghost") return;
+    if (chat.ghostStepIdx >= chat.ghost.steps.length) return;
+    var s = chat.ghost.steps[chat.ghostStepIdx++];
+    schedule(allTimers, s.delay, function () {
+      if (!chat || chat.phase !== "ghost") return;
+      if (s.status) setStatus(s.status, false);
+      if (s.unlockInput) $("chat-input-row").classList.remove("hidden");
+      if (s.msg) {
+        typeThenSay(s.msg, s.typing || 1500, runGhostSteps);
+      } else if (s.typing) {
+        showTyping();
+        schedule(allTimers, s.typing, function () { hideTyping(); runGhostSteps(); });
+      } else {
+        runGhostSteps();
       }
     });
   }
 
   function markAllRead() {
+    if (chat) {
+      chat.messages.forEach(function (m) { if (m.dir === "out" && m.meta) m.meta = "read"; });
+    }
     var metas = $("chat-log").querySelectorAll(".msg.out .meta");
     metas.forEach(function (m) { m.textContent = "read"; });
+  }
+
+  function handleFreeText(text) {
+    addMsg(text, "out", "delivered");
+    if (!chat || chat.phase === "silent") return;
+    if (chat.phase === "questions") return;
+    // Ghost phase replies: increasingly sparse, then silence.
+    var r = chat.ghost.replies[chat.ghostReplyIndex];
+    if (!r) {
+      chat.phase = "silent";
+      schedule(allTimers, 30000, function () { if (chat) markAllRead(); });
+      setStatus("last seen recently", false);
+      return;
+    }
+    chat.ghostReplyIndex++;
+    schedule(allTimers, 1500, function () {
+      if (!chat) return;
+      markAllRead();
+      if (r.msg) { typeThenSay(r.msg, r.typing); }
+      else if (r.typing) { showTyping(); schedule(allTimers, r.typing, hideTyping); }
+      if (chat.ghostReplyIndex >= chat.ghost.replies.length) {
+        chat.phase = "silent";
+        setStatus("last seen 3 hours ago", false);
+      }
+    });
   }
 
   function sendFreeText() {
